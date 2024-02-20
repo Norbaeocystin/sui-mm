@@ -14,7 +14,9 @@ public fun place_limit_order<BaseAsset, QuoteAsset>(
         ctx: &mut TxContext
     ): (u64, u64, bool, u64)
  */
+use sui_types::base_types::ObjectID;
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
+use sui_types::transaction::{CallArg, ObjectArg};
 use sui_types::TypeTag;
 use crate::constant::DEEPBOOK_PKG;
 
@@ -26,6 +28,25 @@ pub fn place_limit_order(mut tb: ProgrammableTransactionBuilder, baseAsset: Type
         "place_limit_order".parse().unwrap(),
         vec![baseAsset, quoteAsset],
         vec![],
+    );
+    return tb
+}
+
+// returns Vec<u64>
+pub fn list_open_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, account_cap: ObjectID) -> ProgrammableTransactionBuilder{
+    let account_cap = ObjectArg::SharedObject {
+        id: account_cap,
+        initial_shared_version: Default::default(),
+        mutable: true,
+    };
+    tb.move_call(
+        DEEPBOOK_PKG.parse().unwrap(),
+        "clob_v2".parse().unwrap(),
+        "list_open_orders".parse().unwrap(),
+        vec![baseAsset, quoteAsset],
+        vec![
+            CallArg::Object(account_cap)
+        ],
     );
     return tb
 }
