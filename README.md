@@ -10,7 +10,7 @@
  - [ ] withdraw quote & base
  - [x] get user balance
  - [x] get prices for oracles ( pyth via hermes api)
- - [ ] place orders
+ - [x] place orders
  - [x] read fills
  - [x] list user's orders
  - [x] get order status

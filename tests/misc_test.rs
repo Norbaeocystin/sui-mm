@@ -21,8 +21,8 @@ use sui_mm::user::{get_account_balance, get_account_cap, parse_result_account_ba
 use sui_mm::utils::{parse_result_u64, parse_result_u64_from_vec};
 use bcs::from_bytes;
 
-#[tokio::main]
-async fn main() {
+#[tokio::test]
+async fn misc_test() {
     env_logger::builder().filter_level(LevelFilter::Debug).init();
     let mut keystore = InMemKeystore::default();
     let mnemonic = env::var("SUI_WALLET").expect("$SUI_WALLET is not set");
@@ -60,12 +60,12 @@ async fn main() {
     let order_wrapper = OrderWrapper::new(&client, pool_id, Some(account_cap_id), None ).await;
     let account_cap_ref = order_wrapper.fetch_account_cap_object_ref().await;
     let tb = order_wrapper.place_limit_order(tb,
-        1_500_000,
-                                    100_000_000,
-                                        true,
-        LIMIT_ORDER_NO_RESTRICTION,
-        None,
-        account_cap_ref,
+                                             1_500_000,
+                                             100_000_000,
+                                             true,
+                                             LIMIT_ORDER_NO_RESTRICTION,
+                                             None,
+                                             account_cap_ref,
     );
     let tb = order_wrapper.place_limit_order(tb,
                                              2_000_000,

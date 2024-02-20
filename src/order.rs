@@ -19,7 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use log::debug;
 use sui_sdk::rpc_types::SuiObjectDataOptions;
 use sui_sdk::SuiClient;
-use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber};
+use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber, SuiAddress};
 use sui_types::digests::ObjectDigest;
 use sui_types::object::Owner;
 use sui_types::object::Owner::Shared;
@@ -27,6 +27,21 @@ use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
 use sui_types::transaction::{CallArg, ObjectArg};
 use sui_types::TypeTag;
 use crate::constant::DEEPBOOK_PKG;
+use serde::{Serialize,Deserialize};
+
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct Order {
+    order_id: u64,
+    client_order_id: u64,
+    price: u64,
+    original_quantity: u64,
+    quantity: u64,
+    is_bid: bool,
+    owner: SuiAddress,
+    expire_timestamp: u64,
+    self_matching_prevention: u8
+}
 
 
 pub struct OrderWrapper<'a> {
@@ -86,7 +101,7 @@ impl  OrderWrapper<'_> {
     }
 
     pub async fn fetch_account_cap_object_ref(&self) -> ObjectRef {
-        let account_cap_raw = self.client.read_api().get_object_with_options(self.capp_id, SuiObjectDataOptions::new()).await.unwrap();
+        let account_cap_raw = self.client.read_api().get_object_with_options(self.cap_id, SuiObjectDataOptions::new()).await.unwrap();
         return account_cap_raw.object().unwrap().object_ref();
     }
 
@@ -114,6 +129,30 @@ impl  OrderWrapper<'_> {
                 account_cap,
             );
     }
+
+    pub fn list_open_orders(self, mut tb: ProgrammableTransactionBuilder) -> ProgrammableTransactionBuilder {
+        return list_open_orders(tb,
+        self.base_asset.clone(),
+            self.quote_asset.clone(),
+            self.pool_id,
+            self.cap_id,
+        )
+    }
+
+    pub fn get_order_status(self, mut tb: ProgrammableTransactionBuilder, order_id: u64) -> ProgrammableTransactionBuilder {
+        return get_order_status(tb,
+        self.base_asset.clone(),
+            self.quote_asset.clone(),
+            self.pool_id,
+            order_id,
+            self.cap_id,
+        );
+    }
+
+    pub fn cancel_all_orders(self, mut tb: ProgrammableTransactionBuilder, account_cap_ref: ObjectRef) -> ProgrammableTransactionBuilder {
+        cancel_all_orders(tb, self.base_asset, self.quote_asset, self.pool_id, self.pool_initial_shared_sequence, account_cap_ref)
+    }
+
 }
 // all is in base asset ...
 pub fn place_limit_order(mut tb: ProgrammableTransactionBuilder,
@@ -231,10 +270,30 @@ public fun get_order_status<BaseAsset, QuoteAsset>(
 ): &Order
  */
 
-pub fn cancel_all_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, pool_id: ObjectID,order_id: u64, account_cap: ObjectRef) -> ProgrammableTransactionBuilder{
+pub fn cancel_all_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, pool_id: ObjectID, pool_sequence_order: SequenceNumber, account_cap: ObjectRef) -> ProgrammableTransactionBuilder{
     let pool_object = ObjectArg::SharedObject {
         id: pool_id,
-        initial_shared_version: Default::default(), // initial
+        initial_shared_version: pool_sequence_order, // initial
+        mutable: true,
+    };
+    let account_cap = ObjectArg::ImmOrOwnedObject(account_cap);
+    tb.move_call(
+        DEEPBOOK_PKG.parse().unwrap(),
+        "clob_v2".parse().unwrap(),
+        "cancel_all_orders".parse().unwrap(),
+        vec![baseAsset, quoteAsset],
+        vec![
+            CallArg::Object(pool_object),
+            CallArg::Object(account_cap)
+        ],
+    );
+    return tb
+}
+
+pub fn cancel_order(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, pool_id: ObjectID, pool_sequence_order: SequenceNumber, order_id: u64, account_cap: ObjectRef) -> ProgrammableTransactionBuilder{
+    let pool_object = ObjectArg::SharedObject {
+        id: pool_id,
+        initial_shared_version: pool_sequence_order, // initial
         mutable: true,
     };
     let account_cap = ObjectArg::ImmOrOwnedObject(account_cap);

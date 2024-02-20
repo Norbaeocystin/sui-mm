@@ -4,11 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "sui_mm"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sui_mm"
+path = "src/main.rs"
 
 [dependencies]
 sui-sdk = { git = "https://github.com/MystenLabs/sui"}
 sui-types = { git = "https://github.com/MystenLabs/sui"}
 sui-keys = { git = "https://github.com/MystenLabs/sui"}
+shared-crypto = { git = "https://github.com/MystenLabs/sui"}
 tokio = "1.32.0"
 fastcrypto = "0.1.6"
 serde_derive = "1.0.193"
@@ -18,3 +26,5 @@ reqwest = "0.11.24"
 url = "2.5.0"
 log = "0.4.19"
 env_logger = { version = "0.10.0", features = [] }
+statistical = "1.0.0"
+bcs = "0.1.6"
