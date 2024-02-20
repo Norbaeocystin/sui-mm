@@ -33,7 +33,12 @@ pub fn place_limit_order(mut tb: ProgrammableTransactionBuilder, baseAsset: Type
 }
 
 // returns Vec<u64>
-pub fn list_open_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, account_cap: ObjectID) -> ProgrammableTransactionBuilder{
+pub fn list_open_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, pool_id: ObjectID, account_cap: ObjectID) -> ProgrammableTransactionBuilder{
+    let pool_object = ObjectArg::SharedObject {
+        id: pool_id,
+        initial_shared_version: Default::default(),
+        mutable: true,
+    };
     let account_cap = ObjectArg::SharedObject {
         id: account_cap,
         initial_shared_version: Default::default(),
@@ -45,6 +50,7 @@ pub fn list_open_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeT
         "list_open_orders".parse().unwrap(),
         vec![baseAsset, quoteAsset],
         vec![
+            CallArg::Object(pool_object),
             CallArg::Object(account_cap)
         ],
     );
