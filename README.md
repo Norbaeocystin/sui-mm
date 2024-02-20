@@ -14,5 +14,5 @@
  - [x] read fills
  - [x] list user's orders
  - [x] get order status
- - [ ] cancel order
- - [ ] cancel orders
+ - [x] cancel order
+ - [x] cancel orders

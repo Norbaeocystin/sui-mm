@@ -1,4 +1,5 @@
 
+pub const TIMESTAMP_INF: u64 = ((1u128 << 64 - 1) as u64);
 pub const SUI_USDC_DECIMALS:u64 = 1_000_000;
 pub const USDC_DECIMALS:u64 = 1_000_000;
 pub const SUI_DECIMALS:u64 = 1_000_000_000;
