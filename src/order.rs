@@ -1,27 +1,9 @@
-
-
-/*
-/// Returns (base quantity filled, quote quantity filled, whether a maker order is being placed, order id of the maker order)
-public fun place_limit_order<BaseAsset, QuoteAsset>(
-        pool: &mut Pool<BaseAsset, QuoteAsset>,
-        price: u64,
-        quantity: u64,
-        is_bid: bool,
-        expire_timestamp: u64,
-        restriction: u8,
-        clock: &Clock,
-        account_cap: &AccountCap,
-        ctx: &mut TxContext
-    ): (u64, u64, bool, u64)
- */
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use log::debug;
 use sui_sdk::rpc_types::SuiObjectDataOptions;
 use sui_sdk::SuiClient;
 use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber, SuiAddress};
-use sui_types::digests::ObjectDigest;
-use sui_types::object::Owner;
 use sui_types::object::Owner::Shared;
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
 use sui_types::transaction::{CallArg, ObjectArg};
@@ -252,23 +234,6 @@ pub fn get_order_status(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeT
     );
     return tb
 }
-
-/*
-/// Parameters expected by this func
-///
-///   0. `[pool]` Object ID refers to the pool containing the trading pair
-///   1. `[order_id]` order id of the order being queried
-///   2. `[account_cap]` Object ID of the account_cap authorizing the
-///       accessilility to the escrow account
-
-/// Returns the order info of the order being queried
-clob_v2
-public fun get_order_status<BaseAsset, QuoteAsset>(
-     pool: &Pool<BaseAsset, QuoteAsset>,
-     order_id: u64,
-     account_cap: &AccountCap
-): &Order
- */
 
 pub fn cancel_all_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, pool_id: ObjectID, pool_sequence_order: SequenceNumber, account_cap: ObjectRef) -> ProgrammableTransactionBuilder{
     let pool_object = ObjectArg::SharedObject {

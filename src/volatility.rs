@@ -20,11 +20,6 @@ impl Volatility {
             }
     }
 
-    // pub fn variance(self, key: &u8) -> f64 {
-    //     let result = self.prices.get(key).unwrap();
-    //     return result.var();
-    // }
-
     pub fn volatility(self) -> Option<f64> {
         if self.prices.len() == self.length {
             let mean_val = mean(&self.prices);

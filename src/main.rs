@@ -9,7 +9,6 @@ use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
 use sui_types::transaction::{Transaction, TransactionData, TransactionKind};
 use sui_types::TypeTag;
 use std::env;
-use std::mem::size_of;
 use sui_sdk::rpc_types::{SuiObjectDataOptions, SuiTransactionBlockResponseOptions, SuiTypeTag};
 use sui_types::quorum_driver_types::ExecuteTransactionRequestType;
 use shared_crypto::intent::Intent;
