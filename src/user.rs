@@ -31,8 +31,9 @@ use sui_sdk::rpc_types::{ObjectsPage, SuiExecutionResult, SuiObjectDataFilter, S
 use sui_sdk::SuiClient;
 use sui_types::base_types::{ObjectID, SequenceNumber, SuiAddress};
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
-use sui_types::transaction::{CallArg, ObjectArg};
+use sui_types::transaction::{Argument, CallArg, ObjectArg, ProgrammableTransaction};
 use sui_types::TypeTag;
+use crate::constant::DEEPBOOK_PKG;
 
 const ACCOUNT_CAP_TAG: &str = "0x000000000000000000000000000000000000000000000000000000000000dee9::custodian_v2::AccountCap";
 
@@ -79,4 +80,12 @@ pub fn get_account_balance(mut tb: ProgrammableTransactionBuilder, baseAsset: Ty
                  ]
                  );
     return tb;
+}
+
+// create and transfer object to owner
+pub fn create_account(owner: SuiAddress) -> ProgrammableTransaction {
+    let mut tb = ProgrammableTransactionBuilder::new();
+    tb.programmable_move_call(DEEPBOOK_PKG.parse().unwrap(), "clob_v2".parse().unwrap(), "create_account".parse().unwrap(), vec![], vec![]);
+    tb.transfer_arg(owner, Argument::Result(0));
+    return tb.finish();
 }

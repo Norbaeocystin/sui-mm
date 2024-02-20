@@ -4,6 +4,7 @@ pub mod utils;
 pub mod constant;
 pub mod order;
 pub mod pyth;
+pub mod pool;
 
 use std::str::FromStr;
 use log::{debug, LevelFilter};

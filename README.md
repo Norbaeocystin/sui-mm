@@ -1,6 +1,10 @@
 ### Experiment with market making on deepbook ( sui )
 
- - [ ] create account cap
+- [deepbook docs](https://docs.sui-deepbook.com/)
+- [deepbook package](https://suiscan.xyz/mainnet/object/0x000000000000000000000000000000000000000000000000000000000000dee9)
+
+
+ - [x] create account cap
  - [ ] read all pools
  - [ ] deposit quote & base
  - [ ] withdraw quote & base
