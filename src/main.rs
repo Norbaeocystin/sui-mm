@@ -19,7 +19,8 @@ use sui_types::TypeTag;
 use std::env;
 use crate::constant::{SUI_PRICE_FEED, USDC_PRICE_FEED};
 use crate::market::{get_fills, get_market_price};
-use crate::pyth::PythFeeder;
+use crate::order::list_open_orders;
+use crate::pyth::{get_sui_usdc_price, PythFeeder};
 use crate::user::{get_account_balance, get_account_cap, parse_result_account_balance};
 use crate::utils::parse_result_u64;
 
@@ -44,7 +45,7 @@ async fn main() {
     debug!("{:?}", object_id );
     let mut tb = ProgrammableTransactionBuilder::new();
     tb = get_account_balance(tb, sui_tag.clone(), usdc_tag.clone(), pool_id, object_id);
-    tb = get_market_price(tb, sui_tag, usdc_tag, pool_id);
+    tb = get_market_price(tb, sui_tag.clone(), usdc_tag.clone(), pool_id);
     let result = client.read_api().dev_inspect_transaction_block(SuiAddress::ZERO, TransactionKind::ProgrammableTransaction(tb.finish()), None, None, None).await;
     let execution_result =  result.unwrap().results.unwrap();
     let item = execution_result.first().unwrap();
@@ -53,8 +54,9 @@ async fn main() {
     debug!("{:?}", parse_result_u64(&execution_result[1], 1));
     // 181.94.248.117
     get_fills(&client).await;
-    let feeder = PythFeeder::new(vec![SUI_PRICE_FEED.to_string(), USDC_PRICE_FEED.to_string()]);
-    let result = feeder.get_latest_price().await;
-    debug!("{:?}", result.unwrap());
+    let feeder = PythFeeder::new_suiusdc();
+    let result = feeder.get_latest_price().await.unwrap();
+    let price = get_sui_usdc_price(result);
+    debug!("{:?}", price);
 }
 
