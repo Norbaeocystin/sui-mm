@@ -15,13 +15,106 @@ public fun place_limit_order<BaseAsset, QuoteAsset>(
     ): (u64, u64, bool, u64)
  */
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
+use log::debug;
+use sui_sdk::rpc_types::SuiObjectDataOptions;
+use sui_sdk::SuiClient;
 use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber};
 use sui_types::digests::ObjectDigest;
+use sui_types::object::Owner;
+use sui_types::object::Owner::Shared;
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
 use sui_types::transaction::{CallArg, ObjectArg};
 use sui_types::TypeTag;
 use crate::constant::DEEPBOOK_PKG;
 
+
+pub struct OrderWrapper<'a> {
+    client: &'a SuiClient,
+    pool_id: ObjectID,
+    pool_initial_shared_sequence: SequenceNumber,
+    cap_id: ObjectID,
+    max_min: u64,
+    base_asset: TypeTag,
+    quote_asset:TypeTag,
+}
+
+impl  OrderWrapper<'_> {
+    // creates OrderWrapper, will fetch initial shared version of pool_id, if max_min not provided - 1 hour will be used
+    pub async fn new(client: &SuiClient, pool_id: ObjectID, cap_id: Option<ObjectID>, max_min: Option<u64>) -> OrderWrapper{
+        let mut account_cap_id = ObjectID::random();
+        if cap_id.is_some() {
+            account_cap_id = cap_id.unwrap();
+        } else {
+            // TODO fetch if not exists create ...
+        }
+        let result = client.read_api().get_object_with_options(pool_id, SuiObjectDataOptions{
+            show_type: true,
+            show_owner: true,
+            show_previous_transaction: false,
+            show_display: false,
+            show_content: false,
+            show_bcs: true,
+            show_storage_rebate: false,
+        }).await.unwrap();
+        let unwrapped = result.data.unwrap();
+        let content = unwrapped.type_.unwrap();
+        let raw_type = content.to_string().clone();
+        let assets = raw_type.split_once("<").unwrap().1.replace(">","").clone();
+        let (base_str_raw, quote_str_raw) = assets.split_once(", ").unwrap();
+        let (base_str, quote_str) = (base_str_raw.clone(), quote_str_raw.clone());
+        let owner = unwrapped.owner.unwrap();
+        let mut pool_isv = SequenceNumber::new();
+        match owner {
+            Shared {initial_shared_version} => {
+                // debug!("initial shared version: {}", initial_shared_version);
+                pool_isv = initial_shared_version;
+            }
+
+            _ => {}
+        }
+        debug!("base: {} quote: {} pool initial shared version {}", base_str, quote_str, pool_isv);
+        return OrderWrapper{
+            client,
+            pool_id,
+            pool_initial_shared_sequence: pool_isv,
+            cap_id: account_cap_id,
+            max_min: if max_min.is_some() {max_min.unwrap()} else {( 1000 * 60 * 60)},
+            base_asset: TypeTag::from_str(base_str).unwrap(),
+            quote_asset: TypeTag::from_str(quote_str).unwrap(),
+        }
+    }
+
+    pub async fn fetch_account_cap_object_ref(&self) -> ObjectRef {
+        let account_cap_raw = self.client.read_api().get_object_with_options(self.capp_id, SuiObjectDataOptions::new()).await.unwrap();
+        return account_cap_raw.object().unwrap().object_ref();
+    }
+
+    // place limit order, if client id not provided it will use timestamp ...
+    pub fn place_limit_order(&self, mut tb: ProgrammableTransactionBuilder,
+                             price: u64,
+                             quantity: u64,
+                             is_bid: bool,
+                             restriction: u8,
+                             client_id: Option<u64>,
+        account_cap: ObjectRef,
+    ) -> ProgrammableTransactionBuilder {
+            let t = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+            return place_limit_order(tb,
+            self.base_asset.clone(),
+                                     self.quote_asset.clone(),
+                self.pool_id,
+                self.pool_initial_shared_sequence,
+                t,
+                price,
+                quantity,
+                is_bid,
+                if client_id.is_some() { client_id.unwrap()} else {t + self.max_min},
+                restriction,
+                account_cap,
+            );
+    }
+}
 // all is in base asset ...
 pub fn place_limit_order(mut tb: ProgrammableTransactionBuilder,
                          baseAsset: TypeTag,
@@ -38,7 +131,7 @@ pub fn place_limit_order(mut tb: ProgrammableTransactionBuilder,
 ) -> ProgrammableTransactionBuilder{
     let pool = ObjectArg::SharedObject{
         id: pool_id,
-        initial_shared_version: SequenceNumber::from_u64(32079148),
+        initial_shared_version: pool_sequence_number, // SequenceNumber::from_u64(32079148),
         mutable: true,
     };
     let account_cap = ObjectArg::ImmOrOwnedObject(account_cap);
