@@ -5,6 +5,7 @@ pub mod constant;
 pub mod order;
 pub mod pyth;
 pub mod pool;
+mod volatility;
 
 use std::str::FromStr;
 use log::{debug, LevelFilter};
