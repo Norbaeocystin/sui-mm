@@ -12,6 +12,7 @@
  - [x] get prices for oracles ( pyth via hermes api)
  - [ ] place orders
  - [x] read fills
- - [ ] list user's orders
+ - [x] list user's orders
+ - [x] get order status
  - [ ] cancel order
  - [ ] cancel orders

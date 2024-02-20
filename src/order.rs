@@ -57,6 +57,31 @@ pub fn list_open_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeT
     return tb
 }
 
+pub fn get_order_status(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, pool_id: ObjectID,order_id: u64, account_cap: ObjectID) -> ProgrammableTransactionBuilder{
+    let pool_object = ObjectArg::SharedObject {
+        id: pool_id,
+        initial_shared_version: Default::default(),
+        mutable: true,
+    };
+    let account_cap = ObjectArg::SharedObject {
+        id: account_cap,
+        initial_shared_version: Default::default(),
+        mutable: true,
+    };
+    tb.move_call(
+        DEEPBOOK_PKG.parse().unwrap(),
+        "clob_v2".parse().unwrap(),
+        "get_order_status".parse().unwrap(),
+        vec![baseAsset, quoteAsset],
+        vec![
+            CallArg::Object(pool_object),
+            CallArg::Pure(order_id.to_le_bytes().to_vec()),
+            CallArg::Object(account_cap)
+        ],
+    );
+    return tb
+}
+
 /*
 /// Parameters expected by this func
 ///
