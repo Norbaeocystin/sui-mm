@@ -137,3 +137,24 @@ public fun get_order_status<BaseAsset, QuoteAsset>(
      account_cap: &AccountCap
 ): &Order
  */
+
+pub fn cancel_all_orders(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, quoteAsset: TypeTag, pool_id: ObjectID,order_id: u64, account_cap: ObjectRef) -> ProgrammableTransactionBuilder{
+    let pool_object = ObjectArg::SharedObject {
+        id: pool_id,
+        initial_shared_version: Default::default(), // initial
+        mutable: true,
+    };
+    let account_cap = ObjectArg::ImmOrOwnedObject(account_cap);
+    tb.move_call(
+        DEEPBOOK_PKG.parse().unwrap(),
+        "clob_v2".parse().unwrap(),
+        "cancel_all_orders".parse().unwrap(),
+        vec![baseAsset, quoteAsset],
+        vec![
+            CallArg::Object(pool_object),
+            CallArg::Pure(order_id.to_le_bytes().to_vec()),
+            CallArg::Object(account_cap)
+        ],
+    );
+    return tb
+}
