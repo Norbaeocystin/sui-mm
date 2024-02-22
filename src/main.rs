@@ -126,7 +126,7 @@ async fn main() {
             // todo if open order is
             if open_orders.len() > 0 {
                 let order = open_orders.first().unwrap();
-                let diff = ((price - order.price).abs()/order.price as f64).min((order.price as f64 - (((bid_ask_data[0] + bid_ask_data[1])/2) as f64)).abs()/order.price as f64);
+                let diff = ((price * 1_000_000.0) - order.price as f64).abs()/order.price as f64).min((order.price as f64 - (((bid_ask_data[0] + bid_ask_data[1])/2) as f64)).abs()/order.price as f64);
                 let t = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
                 // if the price difference is greater than 1 percent
                 if diff > 0.01 || (order.expire_timestamp - t) < 60 * 1000 {
