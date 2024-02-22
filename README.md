@@ -5,7 +5,7 @@
 
 
  - [x] create account cap
- - [ ] read all pools
+ - [x] read all pools
  - [ ] deposit quote & base
  - [ ] withdraw quote & base
  - [x] get user balance

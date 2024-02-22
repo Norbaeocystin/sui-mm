@@ -32,7 +32,7 @@ pub fn calculate_totals(inputs: &Vec<u64>, price: f64, base_decimals: Option<u64
         debug!("volatility too high");
         return None;
     }
-    let mut spread = 0.025_f64;
+    let mut spread = 0.015_f64;
     let ratio = (calc.filled_total as f64)/(total as f64);
     // decrease influence of volatility on spread
     let decrease_vol = if calc.filled_per_s > total {ratio} else {1.0};

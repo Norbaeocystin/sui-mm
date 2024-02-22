@@ -135,7 +135,7 @@ async fn main() {
                     let mut tb = ProgrammableTransactionBuilder::new();
                     let tb = order_wrapper.clone().cancel_all_orders(tb, account_cap_ref);
                     let result = transaction_wrapper.process_ptx(tb.finish(), None, None, None).await;
-                    info!("cancel {:?}", result);
+                    info!("cancel {:?} {} {}", result, diff,  (order.expire_timestamp - t) < 60 * 1000);
                 } else {
                     continue;
                 }
