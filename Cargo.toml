@@ -28,3 +28,4 @@ log = "0.4.19"
 env_logger = { version = "0.10.0", features = [] }
 statistical = "1.0.0"
 bcs = "0.1.6"
+clap = { version = "4.3.11", features = ["derive"] }

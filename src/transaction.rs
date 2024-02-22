@@ -10,10 +10,10 @@ use sui_types::digests::{Digest, TransactionDigest};
 use sui_types::quorum_driver_types::ExecuteTransactionRequestType;
 use sui_types::transaction::{ProgrammableTransaction, Transaction, TransactionData};
 
-struct TransactionWrapper<'a> {
+pub struct TransactionWrapper<'a> {
     client: &'a SuiClient,
     keystore: InMemKeystore,
-    signer: SuiAddress,
+    pub signer: SuiAddress,
 }
 
 impl TransactionWrapper<'_> {
@@ -38,7 +38,7 @@ impl TransactionWrapper<'_> {
             vec![if gascoin_object_ref.is_some() {gascoin_object_ref.unwrap()} else { self.client
                 .coin_read_api()
                 .get_coins(self.signer, None, None, None)
-                .await.unwrap().data.into_iter().next().unwrap().object_ref() }],
+                .await.unwrap().data.into_iter().filter(|x| x.balance > 10 * 50_000_000).next().unwrap().object_ref() }],
             ptx,
             if gasbudget.is_some() {gasbudget.unwrap()} else {50_000_000},
             if gasprice.is_some() {gasprice.unwrap()} else {self.client.read_api().get_reference_gas_price().await.unwrap()},

@@ -1,31 +1,3 @@
-/*
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "suix_getOwnedObjects",
-  "params": [
-    "0xac9d68e280e2dc576e004169fe31e73e3e6897eb2a7b5681f5af34b070ce8447",
-    {
-      "filter": {
-        "StructType": "0x000000000000000000000000000000000000000000000000000000000000dee9::custodian_v2::AccountCap"
-      },
-      "options": {
-        "showBcs": false,
-        "showContent": true,
-        "showDisplay": false,
-        "showOwner": false,
-        "showPreviousTransaction": false,
-        "showStorageRebate": false,
-        "showType": false
-      }
-    },
-    null,
-    null
-  ]
-}
- */
-
-use std::str::FromStr;
 use sui_sdk::error::SuiRpcResult;
 use sui_sdk::rpc_types::{ObjectsPage, SuiExecutionResult, SuiObjectDataFilter, SuiObjectResponseQuery};
 use sui_sdk::SuiClient;

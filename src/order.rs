@@ -1,39 +1,43 @@
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
+use bcs::from_bytes;
 use log::debug;
 use sui_sdk::rpc_types::SuiObjectDataOptions;
 use sui_sdk::SuiClient;
 use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber, SuiAddress};
 use sui_types::object::Owner::Shared;
 use sui_types::programmable_transaction_builder::ProgrammableTransactionBuilder;
-use sui_types::transaction::{CallArg, ObjectArg};
+use sui_types::transaction::{CallArg, ObjectArg, TransactionKind};
 use sui_types::TypeTag;
 use crate::constant::DEEPBOOK_PKG;
 use serde::{Serialize,Deserialize};
+use crate::market::get_market_price;
+use crate::user::get_account_balance;
+use crate::utils::parse_result_u64;
 
 
 #[derive(Serialize,Deserialize,Debug)]
 pub struct Order {
-    order_id: u64,
-    client_order_id: u64,
-    price: u64,
+    pub order_id: u64,
+    pub client_order_id: u64,
+    pub price: u64,
     original_quantity: u64,
     quantity: u64,
     is_bid: bool,
     owner: SuiAddress,
-    expire_timestamp: u64,
+    pub expire_timestamp: u64,
     self_matching_prevention: u8
 }
 
-
+#[derive(Clone)]
 pub struct OrderWrapper<'a> {
     client: &'a SuiClient,
     pool_id: ObjectID,
     pool_initial_shared_sequence: SequenceNumber,
     cap_id: ObjectID,
     max_min: u64,
-    base_asset: TypeTag,
-    quote_asset:TypeTag,
+    pub base_asset: String,
+    pub quote_asset: String,
 }
 
 impl  OrderWrapper<'_> {
@@ -77,8 +81,8 @@ impl  OrderWrapper<'_> {
             pool_initial_shared_sequence: pool_isv,
             cap_id: account_cap_id,
             max_min: if max_min.is_some() {max_min.unwrap()} else {( 1000 * 60 * 60)},
-            base_asset: TypeTag::from_str(base_str).unwrap(),
-            quote_asset: TypeTag::from_str(quote_str).unwrap(),
+            base_asset: base_str.to_string(),
+            quote_asset: quote_str.to_string(),
         }
     }
 
@@ -95,27 +99,28 @@ impl  OrderWrapper<'_> {
                              restriction: u8,
                              client_id: Option<u64>,
         account_cap: ObjectRef,
+        expiration: Option<u64>,
     ) -> ProgrammableTransactionBuilder {
             let t = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
             return place_limit_order(tb,
-            self.base_asset.clone(),
-                                     self.quote_asset.clone(),
-                self.pool_id,
-                self.pool_initial_shared_sequence,
-                t,
-                price,
-                quantity,
-                is_bid,
-                if client_id.is_some() { client_id.unwrap()} else {t + self.max_min},
-                restriction,
-                account_cap,
+                                     TypeTag::from_str(&*self.base_asset).unwrap(),
+                                     TypeTag::from_str(&*self.quote_asset).unwrap(),
+                                     self.pool_id,
+                                     self.pool_initial_shared_sequence,
+                                     t,
+                                     price,
+                                     quantity,
+                                     is_bid,
+                                     if expiration.is_some() { expiration.unwrap()} else {t + self.max_min},
+                                     restriction,
+                                     account_cap,
             );
     }
 
     pub fn list_open_orders(self, mut tb: ProgrammableTransactionBuilder) -> ProgrammableTransactionBuilder {
         return list_open_orders(tb,
-        self.base_asset.clone(),
-            self.quote_asset.clone(),
+                                TypeTag::from_str(&*self.base_asset).unwrap(),
+                                TypeTag::from_str(&*self.quote_asset).unwrap(),
             self.pool_id,
             self.cap_id,
         )
@@ -123,8 +128,8 @@ impl  OrderWrapper<'_> {
 
     pub fn get_order_status(self, mut tb: ProgrammableTransactionBuilder, order_id: u64) -> ProgrammableTransactionBuilder {
         return get_order_status(tb,
-        self.base_asset.clone(),
-            self.quote_asset.clone(),
+                                TypeTag::from_str(&*self.base_asset).unwrap(),
+                                TypeTag::from_str(&*self.quote_asset).unwrap(),
             self.pool_id,
             order_id,
             self.cap_id,
@@ -132,9 +137,47 @@ impl  OrderWrapper<'_> {
     }
 
     pub fn cancel_all_orders(self, mut tb: ProgrammableTransactionBuilder, account_cap_ref: ObjectRef) -> ProgrammableTransactionBuilder {
-        cancel_all_orders(tb, self.base_asset, self.quote_asset, self.pool_id, self.pool_initial_shared_sequence, account_cap_ref)
+        cancel_all_orders(tb,                                      TypeTag::from_str(&*self.base_asset).unwrap(),
+                          TypeTag::from_str(&*self.quote_asset).unwrap(),self.pool_id, self.pool_initial_shared_sequence, account_cap_ref)
     }
 
+    pub fn get_market_price(self, mut tb: ProgrammableTransactionBuilder) -> ProgrammableTransactionBuilder {
+        return get_market_price(tb,                                      TypeTag::from_str(&*self.base_asset).unwrap(),
+                                TypeTag::from_str(&*self.quote_asset).unwrap(), self.pool_id)
+    }
+
+    pub fn get_account_balance(self, mut tb: ProgrammableTransactionBuilder) -> ProgrammableTransactionBuilder {
+        return get_account_balance(tb,                                      TypeTag::from_str(&*self.base_asset).unwrap(),
+                                   TypeTag::from_str(&*self.quote_asset).unwrap(), self.pool_id, self.cap_id)
+    }
+
+    pub fn add_transactions(&self, mut tb: ProgrammableTransactionBuilder) -> ProgrammableTransactionBuilder {
+        let tb = get_account_balance(tb,
+                                     TypeTag::from_str(&*self.base_asset).unwrap(),
+                                     TypeTag::from_str(&*self.quote_asset).unwrap(),
+                                     self.pool_id,
+                                     self.cap_id);
+        let tb = get_market_price(tb,
+                                  TypeTag::from_str(&*self.base_asset).unwrap(),
+                                  TypeTag::from_str(&*self.quote_asset).unwrap(),
+                                  self.pool_id);
+       return list_open_orders(tb,
+                                       TypeTag::from_str(&*self.base_asset).unwrap(),
+                                       TypeTag::from_str(&*self.quote_asset).unwrap(),
+                                       self.pool_id,
+                                       self.cap_id,);
+    }
+
+    pub async fn get_data(&self) -> (Vec<u64>, Vec<u64>, Vec<Order>){
+        let mut tb = ProgrammableTransactionBuilder::new();
+        let tb = self.add_transactions(tb);
+        let response = self.client.read_api().dev_inspect_transaction_block(SuiAddress::ZERO, TransactionKind::ProgrammableTransaction(tb.finish()), None, None, None).await;
+        let results = response.unwrap().results.unwrap();
+        let account_balance_results = parse_result_u64(&results[0], 0);
+        let market_price_results = parse_result_u64(&results[1], 1);
+        let orders: Vec<Order> = from_bytes(&results[2].return_values[0].0).unwrap();
+        return (account_balance_results, market_price_results, orders);
+    }
 }
 // all is in base asset ...
 pub fn place_limit_order(mut tb: ProgrammableTransactionBuilder,

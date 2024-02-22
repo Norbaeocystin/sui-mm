@@ -5840,6 +5840,7 @@ name = "sui-mm"
 version = "0.1.0"
 dependencies = [
  "bcs",
+ "clap",
  "env_logger",
  "fastcrypto 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",

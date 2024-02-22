@@ -51,7 +51,7 @@ async fn misc_test() {
     let results = parse_result_u64(item, 0);
     debug!("{:?}", results);
     debug!("{:?}", parse_result_u64(&execution_result[1], 1));
-    get_fills(&client).await;
+    // get_fills(&client).await;
     let feeder = PythFeeder::new_suiusdc();
     let result = feeder.get_latest_price().await.unwrap();
     let price = get_sui_usdc_price(result);
