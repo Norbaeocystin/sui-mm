@@ -15,6 +15,14 @@ use crate::market::get_market_price;
 use crate::user::get_account_balance;
 use crate::utils::parse_result_u64;
 
+#[derive(Serialize,Deserialize,Debug)]
+pub struct OrderPage {
+    pub orders: Vec<Order>,
+    pub has_next_page: bool,
+    pub next_tick_level: Option<u64>,
+    pub next_order_id: Option<u64>
+}
+
 
 #[derive(Serialize,Deserialize,Debug)]
 pub struct Order {
@@ -178,6 +186,37 @@ impl  OrderWrapper<'_> {
         let orders: Vec<Order> = from_bytes(&results[2].return_values[0].0).unwrap();
         return (account_balance_results, market_price_results, orders);
     }
+
+    pub async fn get_bid_ask(&self) -> (OrderPage, OrderPage) {
+        let mut tb = ProgrammableTransactionBuilder::new();
+        tb = order_query_iter_bids(tb, self.base_asset.parse().unwrap(),
+                                   self.quote_asset.parse().unwrap(),
+                                   self.pool_id,
+            self.pool_initial_shared_sequence,
+            None,
+            None,
+            None,
+            None,
+            false
+        );
+        tb = order_query_iter_asks(tb, self.base_asset.parse().unwrap(),
+                                   self.quote_asset.parse().unwrap(),
+                                   self.pool_id,
+                                   self.pool_initial_shared_sequence,
+                                   None,
+                                   None,
+                                   None,
+                                   None,
+                                   true
+        );
+        let response = self.client.read_api().dev_inspect_transaction_block(SuiAddress::ZERO, TransactionKind::ProgrammableTransaction(tb.finish()), None, None, None).await;
+        debug!("{:?}", response);
+        let results = response.unwrap().results.unwrap();
+        debug!("{:?}", results);
+        let bid_orders: OrderPage= from_bytes(&results[0].return_values[0].0).unwrap();
+        let ask_orders: OrderPage = from_bytes(&results[1].return_values[0].0).unwrap();
+        return (bid_orders, ask_orders);
+    }
 }
 // all is in base asset ...
 pub fn place_limit_order(mut tb: ProgrammableTransactionBuilder,
@@ -317,4 +356,86 @@ pub fn cancel_order(mut tb: ProgrammableTransactionBuilder, baseAsset: TypeTag, 
         ],
     );
     return tb
+}
+
+pub fn order_query_iter_bids(mut tb: ProgrammableTransactionBuilder,
+                             baseAsset: TypeTag, quoteAsset: TypeTag,
+                             pool_id: ObjectID,
+                             pool_sequence_order: SequenceNumber,
+                             start_tick_level: Option<u64>,
+                             // order id within that tick level to start from
+                             start_order_id: Option<u64>,
+                             // if provided, do not include orders with an expire timestamp less than the provided value (expired order),
+                             // value is in microseconds
+                             min_expire_timestamp: Option<u64>,
+                             // do not show orders with an ID larger than max_id--
+                             // i.e., orders added later than this one
+                             max_id: Option<u64>,
+                             // if true, the orders are returned in ascending tick level.
+                             ascending: bool,
+) -> ProgrammableTransactionBuilder {
+    let pool_object = ObjectArg::SharedObject {
+        id: pool_id,
+        initial_shared_version: pool_sequence_order, // initial
+        mutable: true,
+    };
+    tb.move_call(
+        DEEPBOOK_PKG.parse().unwrap(),
+        "order_query".parse().unwrap(),
+        "iter_bids".parse().unwrap(),
+        vec![baseAsset, quoteAsset],
+        vec![
+            CallArg::Object(pool_object),
+            CallArg::Pure(if start_tick_level.is_none() {vec![0_u8]} else {extend_to_option(start_tick_level.unwrap())}),
+            CallArg::Pure(if start_tick_level.is_none() {vec![0_u8]} else {extend_to_option(start_order_id.unwrap())}),
+            CallArg::Pure(if start_tick_level.is_none() {vec![0_u8]} else {extend_to_option(min_expire_timestamp.unwrap())}),
+            CallArg::Pure(if start_tick_level.is_none() {vec![0_u8]} else {extend_to_option(max_id.unwrap())}),
+            CallArg::Pure(vec![if ascending {1} else {0}]),
+        ],
+    );
+    return tb
+}
+
+pub fn order_query_iter_asks(mut tb: ProgrammableTransactionBuilder,
+                             baseAsset: TypeTag, quoteAsset: TypeTag,
+                             pool_id: ObjectID,
+                             pool_sequence_order: SequenceNumber,
+                             start_tick_level: Option<u64>,
+                             // order id within that tick level to start from
+                             start_order_id: Option<u64>,
+                             // if provided, do not include orders with an expire timestamp less than the provided value (expired order),
+                             // value is in microseconds
+                             min_expire_timestamp: Option<u64>,
+                             // do not show orders with an ID larger than max_id--
+                             // i.e., orders added later than this one
+                             max_id: Option<u64>,
+                             // if true, the orders are returned in ascending tick level.
+                             ascending: bool,
+) -> ProgrammableTransactionBuilder {
+    let pool_object = ObjectArg::SharedObject {
+        id: pool_id,
+        initial_shared_version: pool_sequence_order, // initial
+        mutable: true,
+    };
+    tb.move_call(
+        DEEPBOOK_PKG.parse().unwrap(),
+        "order_query".parse().unwrap(),
+        "iter_asks".parse().unwrap(),
+        vec![baseAsset, quoteAsset],
+        vec![
+            CallArg::Object(pool_object),
+            CallArg::Pure(if start_tick_level.is_none() {vec![0_u8]} else {extend_to_option(start_tick_level.unwrap())}),
+            CallArg::Pure(if start_tick_level.is_none() {vec![0_u8]} else {extend_to_option(start_order_id.unwrap())}),
+            CallArg::Pure(if start_tick_level.is_none() {vec![0_u8]} else {extend_to_option(min_expire_timestamp.unwrap())}),
+            CallArg::Pure(if start_tick_level.is_none() {vec![0_u8]} else {extend_to_option(max_id.unwrap())}),
+            CallArg::Pure(vec![if ascending {1} else {0}]),
+        ],
+    );
+    return tb
+}
+
+pub fn extend_to_option(value: u64) -> Vec<u8>{
+    let mut  values = value.to_le_bytes().to_vec();
+    values.insert(0, {1});
+    return values;
 }
